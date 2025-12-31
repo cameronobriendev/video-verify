@@ -317,8 +317,8 @@ body {
 /* Frame Preview */
 .frames-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
   margin-top: 16px;
 }
 
@@ -392,7 +392,7 @@ body {
   }
 
   .frames-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
   }
 
   .actions {

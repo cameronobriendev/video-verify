@@ -4,38 +4,48 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-const ANALYSIS_PROMPT = `You are an expert video forensics analyst specializing in deepfake detection and video authenticity verification.
+const ANALYSIS_PROMPT = `You are an expert video forensics analyst specializing in deepfake detection. Your job is to be SKEPTICAL and look for ANY signs of manipulation.
 
-Analyze these video frames for signs of manipulation, deepfakes, or synthetic generation. Look for:
+IMPORTANT: Assume the video MAY be manipulated until proven otherwise. Modern deepfakes are sophisticated - look carefully.
 
-1. FACIAL ANALYSIS:
-   - Unnatural facial movements or expressions
-   - Inconsistent skin texture or blending at face boundaries
-   - Eye movement anomalies (blinking patterns, gaze direction)
-   - Lip sync issues or unnatural mouth movements
+Analyze these frames for manipulation indicators:
 
-2. VISUAL ARTIFACTS:
-   - Blurring or warping around face edges
-   - Inconsistent lighting or shadows on face vs background
-   - Compression artifacts that differ between face and body
-   - Unnatural hair boundaries or movement
+1. FACIAL ARTIFACTS (most common in deepfakes):
+   - Face boundary blending issues (look at jawline, hairline, ears)
+   - Skin texture inconsistencies (too smooth, plastic-looking, or mismatched)
+   - Unnatural eye reflections or catchlights that don't match
+   - Teeth that look blurry, merged, or unnaturally uniform
+   - Asymmetric facial features that shift between frames
+   - "Uncanny valley" appearance - face looks slightly off
 
-3. TEMPORAL CONSISTENCY:
-   - Frame-to-frame inconsistencies in face position/angle
-   - Flickering or jittering in facial features
-   - Unnatural transitions between expressions
+2. TEMPORAL ARTIFACTS (frame-to-frame):
+   - Face position/angle that jumps or jitters unnaturally
+   - Skin tone or lighting that flickers between frames
+   - Facial features that "swim" or warp slightly
+   - Blinking patterns that seem off (too regular, too rare, or unnatural)
+   - Expression changes that don't flow naturally
 
-4. BACKGROUND ANALYSIS:
-   - Background consistency across frames
-   - Edge artifacts where subject meets background
+3. BOUNDARY ARTIFACTS:
+   - Blurring specifically around face edges
+   - Color bleeding between face and background
+   - Hair that looks painted on or doesn't move naturally
+   - Neck/shoulder area that doesn't match the face
 
-Provide a detailed analysis covering:
-- What you observe in each frame
-- Any suspicious indicators found
-- Overall assessment of authenticity
-- Confidence level in your assessment
+4. LIGHTING/SHADOW ISSUES:
+   - Face lighting that doesn't match the scene
+   - Shadows on face inconsistent with background shadows
+   - Reflections that don't match between face and environment
 
-Be specific about which frames show issues and what exactly you detected.`;
+5. COMPRESSION TELLS:
+   - Different compression levels on face vs body/background
+   - Blockiness or artifacts specifically around facial region
+
+For each issue found, specify:
+- Which frame(s)
+- Exactly what you see
+- How confident you are it indicates manipulation
+
+CRITICAL: If you see ANYTHING suspicious, flag it. It's better to have false positives than miss a deepfake. Be thorough and skeptical.`;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -81,7 +91,7 @@ export default async function handler(req, res) {
           ]
         }
       ],
-      max_tokens: 2000
+      max_tokens: 3000
     });
 
     const analysis = response.choices[0].message.content;

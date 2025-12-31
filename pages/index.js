@@ -130,7 +130,7 @@ export default function Home() {
     try {
       // Step 1: Extract frames
       setProgress({ stage: 'Extracting frames', percent: 5 });
-      const frames = await extractFrames(file, 6);
+      const frames = await extractFrames(file, 12);
 
       // Step 2: Send to API
       setProgress({ stage: 'Analyzing with AI', percent: 40 });
