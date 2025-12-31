@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
+import { DEMO_FRAMES, DEMO_VIDEO_INFO } from '../lib/demoFrames';
 
 export default function Home() {
   const router = useRouter();
@@ -166,18 +167,12 @@ export default function Home() {
     });
   };
 
-  const handleAnalyze = async () => {
-    if (!file) return;
-
+  const analyzeFrames = async (frames, fileInfo) => {
     setLoading(true);
     setError(null);
 
     try {
-      // Step 1: Extract frames
-      setProgress({ stage: 'Extracting frames', percent: 5 });
-      const frames = await extractFrames(file);
-
-      // Step 2: Send to API
+      // Send to API
       setProgress({ stage: 'Analyzing with AI', percent: 40 });
 
       const response = await fetch('/api/analyze', {
@@ -200,8 +195,8 @@ export default function Home() {
       // Store results and navigate
       sessionStorage.setItem('analysisResult', JSON.stringify({
         ...result,
-        fileName: file.name,
-        fileSize: file.size,
+        fileName: fileInfo.fileName,
+        fileSize: fileInfo.fileSize,
         frames: frames.map(f => ({ timestamp: f.timestamp, data: f.data })),
         analyzedAt: new Date().toISOString()
       }));
@@ -213,6 +208,41 @@ export default function Home() {
       setError(err.message || 'Failed to analyze video');
       setLoading(false);
     }
+  };
+
+  const handleAnalyze = async () => {
+    if (!file) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Step 1: Extract frames
+      setProgress({ stage: 'Extracting frames', percent: 5 });
+      const frames = await extractFrames(file);
+
+      // Step 2: Analyze
+      await analyzeFrames(frames, { fileName: file.name, fileSize: file.size });
+
+    } catch (err) {
+      console.error('Analysis error:', err);
+      setError(err.message || 'Failed to analyze video');
+      setLoading(false);
+    }
+  };
+
+  const handleDemoAnalyze = async () => {
+    setLoading(true);
+    setError(null);
+    setProgress({ stage: 'Loading demo video', percent: 10 });
+
+    // Small delay to show loading state
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    setProgress({ stage: 'Frames ready', percent: 30 });
+
+    // Use pre-extracted demo frames
+    await analyzeFrames(DEMO_FRAMES, DEMO_VIDEO_INFO);
   };
 
   const formatFileSize = (bytes) => {
@@ -229,6 +259,19 @@ export default function Home() {
         <meta name="description" content="Detect deepfakes and verify video authenticity with AI-powered analysis" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
+
+      {/* Navigation */}
+      <nav className="nav-bar">
+        <a href="https://cameronobrien.dev" className="nav-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>
+          Portfolio
+        </a>
+        <div style={{ opacity: 0.7, fontSize: '0.85rem' }}>
+          Built by cameronobrien.dev
+        </div>
+      </nav>
 
       <div className="container">
         <header className="header">
@@ -274,14 +317,7 @@ export default function Home() {
         </div>
 
         {error && (
-          <div style={{
-            marginTop: 16,
-            padding: '12px 16px',
-            background: 'rgba(239, 68, 68, 0.1)',
-            border: '1px solid rgba(239, 68, 68, 0.3)',
-            borderRadius: 8,
-            color: '#ef4444'
-          }}>
+          <div className="error-message">
             {error}
           </div>
         )}
@@ -292,6 +328,20 @@ export default function Home() {
           disabled={!file || loading}
         >
           {loading ? 'Analyzing...' : 'Analyze Video'}
+        </button>
+
+        {/* Demo Section */}
+        <div className="demo-divider">or try a demo</div>
+
+        <button
+          className="btn btn-demo btn-full"
+          onClick={handleDemoAnalyze}
+          disabled={loading}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polygon points="5 3 19 12 5 21 5 3" />
+          </svg>
+          Test with Morgan Freeman Deepfake
         </button>
 
         {loading && (
