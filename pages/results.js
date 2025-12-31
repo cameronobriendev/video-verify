@@ -24,10 +24,10 @@ export default function Results() {
     const parsed = parseAnalysisResponse(data.analysis);
     setRiskData(parsed);
 
-    const extractedSignals = extractSignals(data.analysis);
+    const extractedSignals = extractSignals(data.analysis, parsed.riskLevel);
     setSignals(extractedSignals);
 
-    const conf = calculateConfidence(extractedSignals, data.framesAnalyzed || 6);
+    const conf = calculateConfidence(extractedSignals, data.framesAnalyzed || 15);
     setConfidence(conf);
   }, [router]);
 
