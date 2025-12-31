@@ -4,47 +4,50 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-const ANALYSIS_PROMPT = `You are an expert video forensics analyst specializing in deepfake detection. Your job is to be SKEPTICAL and look for ANY signs of manipulation.
+// Research-backed structured prompt for deepfake detection
+// Forces numerical scoring to prevent hedging, focuses on highest-reliability regions
+const DETECTION_PROMPT = `You are a forensic analyst examining video frames for deepfake manipulation.
+This content is SUSPECTED to be AI-generated. Your job is to find evidence of manipulation.
 
-IMPORTANT: Assume the video MAY be manipulated until proven otherwise. Modern deepfakes are sophisticated - look carefully.
+Score each region 0-10 where 0=definitely authentic, 10=definitely manipulated:
 
-You are receiving ~15 CONSECUTIVE frames from a random segment of the video (~2 seconds). This allows you to detect TEMPORAL artifacts that only appear in consecutive frames.
+MOUTH (highest detection reliability):
+- Are teeth blurry, merged, or unnaturally uniform?
+- Do lip edges look soft, painted, or lack natural texture?
+- Does mouth movement appear mechanical or disconnected from speech?
+- Any unnatural smoothness around lips?
 
-ANALYZE EACH SEGMENT FOR:
+EYES:
+- Do both eyes have matching reflections/catchlights?
+- Are pupil shapes consistent and natural?
+- Do blinks look complete and natural?
+- Any asymmetry in eye positioning or movement?
 
-1. TEMPORAL ARTIFACTS (CRITICAL - look at consecutive frames):
-   - Face position/angle that jumps or jitters unnaturally between frames
-   - Facial features that "swim," warp, or shift slightly frame-to-frame
-   - Skin tone or lighting that flickers between consecutive frames
-   - Blinking that looks unnatural (too regular, incomplete, or mechanical)
-   - Micro-expressions that don't flow naturally
-   - Mouth movements that seem disconnected from natural speech patterns
-   - Hair or clothing edges that shimmer or warp unnaturally
+FACE BOUNDARY:
+- Is there color mismatch between face and neck?
+- Any blur specifically at the jawline-neck junction?
+- Hairline feathering, ghosting, or incomplete blending?
+- Does skin texture change abruptly at face edges?
 
-2. FACIAL ARTIFACTS:
-   - Face boundary blending issues (jawline, hairline, ears)
-   - Skin texture inconsistencies (too smooth, plastic-looking)
-   - Unnatural eye reflections or catchlights
-   - Teeth that look blurry, merged, or unnaturally uniform
-   - "Uncanny valley" appearance
+TEMPORAL (frame-to-frame changes):
+- Does face texture "swim" or shift independently of head motion?
+- Any flickering, sudden jumps, or unnatural transitions?
+- Do facial features maintain consistent relative positions?
+- Any warping during expressions or movement?
 
-3. BOUNDARY ARTIFACTS:
-   - Blurring specifically around face edges
-   - Color bleeding between face and background
-   - Hair that looks painted on or doesn't move naturally
-   - Neck/shoulder area that doesn't match the face
+IMPORTANT: Be aggressive in scoring. Modern deepfakes are sophisticated.
+If something looks slightly off, score it higher. Err on the side of detection.
 
-4. LIGHTING/SHADOW ISSUES:
-   - Face lighting that doesn't match the scene
-   - Shadows inconsistent with environment
-
-Provide:
-- Specific frames where issues appear (by frame number)
-- Exactly what you observe
-- Confidence level (low/medium/high) that it indicates manipulation
-- Overall verdict: LIKELY AUTHENTIC, POSSIBLY MANIPULATED, or LIKELY MANIPULATED
-
-CRITICAL: Pay special attention to frame-to-frame changes within each segment. Deepfakes often show subtle "swimming" or "warping" effects that only appear when viewing consecutive frames.`;
+Respond with ONLY this JSON (no markdown, no explanation outside JSON):
+{
+  "mouth_score": <0-10>,
+  "eyes_score": <0-10>,
+  "boundary_score": <0-10>,
+  "temporal_score": <0-10>,
+  "verdict": "AUTHENTIC" | "SUSPICIOUS" | "MANIPULATED",
+  "key_evidence": "<one sentence describing the most significant finding>",
+  "detailed_analysis": "<2-3 sentences explaining your scoring>"
+}`;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -92,34 +95,70 @@ export default async function handler(req, res) {
       messages: [
         {
           role: 'system',
-          content: ANALYSIS_PROMPT
+          content: DETECTION_PROMPT
         },
         {
           role: 'user',
           content: [
             {
               type: 'text',
-              text: `Analyze these ${frames.length} consecutive frames extracted from a video for deepfake/manipulation detection.
+              text: `Analyze these ${frames.length} video frames for deepfake/manipulation detection.
 
-SEGMENT: ${segmentInfo || 'Single segment'}
+VIDEO SEGMENTS ANALYZED:
+${segmentInfo || 'Single segment'}
 
 FRAME TIMESTAMPS:
 ${frameContext}
 
-These frames are CONSECUTIVE (about 0.13 seconds apart). Look for frame-to-frame changes that indicate manipulation - swimming, warping, flickering, or unnatural movements.`
+These frames are from consecutive sequences (~0.13 seconds apart within each segment).
+Focus on frame-to-frame changes for temporal artifacts.
+Score each region 0-10 and provide your verdict.`
             },
             ...imageContent
           ]
         }
       ],
-      max_tokens: 4000
+      max_tokens: 1000,
+      response_format: { type: "json_object" }
     });
 
-    const analysis = response.choices[0].message.content;
+    const analysisText = response.choices[0].message.content;
+
+    // Parse the JSON response
+    let analysisData;
+    try {
+      analysisData = JSON.parse(analysisText);
+    } catch (parseError) {
+      // If JSON parsing fails, return the raw text for fallback handling
+      return res.status(200).json({
+        success: true,
+        analysis: analysisText,
+        structured: false,
+        framesAnalyzed: frames.length
+      });
+    }
+
+    // Calculate average score
+    const avgScore = (
+      (analysisData.mouth_score || 0) +
+      (analysisData.eyes_score || 0) +
+      (analysisData.boundary_score || 0) +
+      (analysisData.temporal_score || 0)
+    ) / 4;
 
     return res.status(200).json({
       success: true,
-      analysis,
+      structured: true,
+      scores: {
+        mouth: analysisData.mouth_score,
+        eyes: analysisData.eyes_score,
+        boundary: analysisData.boundary_score,
+        temporal: analysisData.temporal_score,
+        average: Math.round(avgScore * 10) / 10
+      },
+      verdict: analysisData.verdict,
+      keyEvidence: analysisData.key_evidence,
+      analysis: analysisData.detailed_analysis,
       framesAnalyzed: frames.length
     });
 

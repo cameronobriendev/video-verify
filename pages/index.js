@@ -45,8 +45,9 @@ export default function Home() {
     }
   };
 
-  // Extract frames using temporal density approach:
-  // 3 random segments, ~15 consecutive frames each (2 seconds sampled)
+  // Multi-segment temporal sampling:
+  // 3 segments at 25%, 50%, 75% of video duration
+  // 8 consecutive frames per segment = 24 total frames
   const extractFrames = async (videoFile) => {
     return new Promise((resolve, reject) => {
       const video = document.createElement('video');
@@ -58,10 +59,10 @@ export default function Home() {
       video.playsInline = true;
 
       const allFrames = [];
-      const segments = 1; // 1 random spot in video
-      const framesPerSegment = 15; // 15 consecutive frames
-      const segmentDuration = 2; // 2 seconds
-      const frameInterval = segmentDuration / framesPerSegment; // ~0.133s between frames
+      const segments = 3; // Sample from 3 different parts of video
+      const framesPerSegment = 8; // 8 consecutive frames each
+      const segmentDuration = 1; // ~1 second per segment
+      const frameInterval = segmentDuration / framesPerSegment; // ~0.125s between frames
 
       let segmentTimestamps = [];
       let currentSegment = 0;
@@ -70,34 +71,31 @@ export default function Home() {
       video.onloadedmetadata = () => {
         const duration = video.duration;
 
-        // Pick 3 random timestamps (avoid first/last 3 seconds)
-        const safeStart = Math.min(3, duration * 0.1);
-        const safeEnd = Math.max(duration - 3, duration * 0.9);
-        const usableDuration = safeEnd - safeStart - segmentDuration;
+        // Sample at 25%, 50%, 75% of video duration
+        // Avoid first/last 10% of video
+        const safeStart = duration * 0.1;
+        const safeEnd = duration * 0.9;
 
-        if (usableDuration < segmentDuration * segments) {
-          // Short video: just sample evenly
-          for (let i = 0; i < segments; i++) {
-            segmentTimestamps.push(safeStart + (usableDuration / segments) * i);
-          }
+        if (duration < 3) {
+          // Very short video: sample evenly
+          segmentTimestamps = [
+            safeStart,
+            duration * 0.5,
+            safeEnd - segmentDuration
+          ];
         } else {
-          // Pick random non-overlapping segments
-          const used = [];
-          for (let i = 0; i < segments; i++) {
-            let timestamp;
-            let attempts = 0;
-            do {
-              timestamp = safeStart + Math.random() * usableDuration;
-              attempts++;
-            } while (
-              used.some(t => Math.abs(t - timestamp) < segmentDuration + 1) &&
-              attempts < 50
-            );
-            used.push(timestamp);
-            segmentTimestamps.push(timestamp);
-          }
-          segmentTimestamps.sort((a, b) => a - b);
+          // Normal video: sample at 25%, 50%, 75%
+          segmentTimestamps = [
+            duration * 0.25,
+            duration * 0.50,
+            duration * 0.75
+          ];
         }
+
+        // Ensure segments don't exceed video duration
+        segmentTimestamps = segmentTimestamps.map(t =>
+          Math.min(t, duration - segmentDuration)
+        );
 
         canvas.width = Math.min(video.videoWidth, 1280);
         canvas.height = Math.min(video.videoHeight, 720);
@@ -197,7 +195,7 @@ export default function Home() {
         ...result,
         fileName: fileInfo.fileName,
         fileSize: fileInfo.fileSize,
-        frames: frames.map(f => ({ timestamp: f.timestamp, data: f.data })),
+        frames: frames.map(f => ({ timestamp: f.timestamp, data: f.data, segment: f.segment })),
         analyzedAt: new Date().toISOString()
       }));
 

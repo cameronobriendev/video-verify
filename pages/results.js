@@ -21,18 +21,32 @@ export default function Results() {
     const data = JSON.parse(stored);
     setResult(data);
 
-    // Process the analysis
-    const parsed = parseAnalysisResponse(data.analysis);
+    // Process the analysis - pass entire API response object
+    const parsed = parseAnalysisResponse(data);
     setRiskData(parsed);
 
-    const extractedSignals = extractSignals(data.analysis, parsed.riskLevel);
+    const extractedSignals = extractSignals(parsed);
     setSignals(extractedSignals);
 
-    const conf = calculateConfidence(extractedSignals, data.framesAnalyzed || 15);
+    const conf = calculateConfidence(extractedSignals, data.framesAnalyzed || 24, parsed.scores);
     setConfidence(conf);
   }, [router]);
 
   const handleDownloadReport = async () => {
+    const scoresSection = riskData?.scores ? `
+--------------------------------------------------------------------------------
+REGION ANALYSIS SCORES (0=authentic, 10=manipulated)
+--------------------------------------------------------------------------------
+Mouth Region:         ${riskData.scores.mouth ?? 'N/A'}/10
+Eye Region:           ${riskData.scores.eyes ?? 'N/A'}/10
+Face Boundary:        ${riskData.scores.boundary ?? 'N/A'}/10
+Temporal Consistency: ${riskData.scores.temporal ?? 'N/A'}/10
+Average Score:        ${riskData.scores.average ?? 'N/A'}/10
+
+Verdict: ${riskData.verdict || 'N/A'}
+${riskData.keyEvidence ? `Key Finding: ${riskData.keyEvidence}` : ''}
+` : '';
+
     const reportContent = `
 ================================================================================
                         VIDEO AUTHENTICITY REPORT
@@ -56,7 +70,7 @@ Risk Level:      ${riskData?.riskInfo?.label || 'Unknown'}
 Confidence:      ${confidence}%
 
 ${riskData?.riskInfo?.description || ''}
-
+${scoresSection}
 --------------------------------------------------------------------------------
 DETECTED SIGNALS
 --------------------------------------------------------------------------------
@@ -65,7 +79,7 @@ ${signals.map(s => `[${s.severity.toUpperCase()}] ${s.category}: ${s.signal}`).j
 --------------------------------------------------------------------------------
 DETAILED ANALYSIS
 --------------------------------------------------------------------------------
-${result.analysis}
+${riskData?.rawAnalysis || result.analysis}
 
 ================================================================================
                               END OF REPORT
@@ -172,6 +186,57 @@ use multiple verification methods for critical applications.
           </div>
         </div>
 
+        {/* Region Scores */}
+        {riskData.scores && (
+          <div className="result-card">
+            <h3>Region Analysis Scores</h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: 16 }}>
+              Scale: 0 = authentic, 10 = manipulated
+            </p>
+            <div className="scores-grid">
+              {[
+                { key: 'mouth', label: 'Mouth Region', icon: '👄' },
+                { key: 'eyes', label: 'Eye Region', icon: '👁️' },
+                { key: 'boundary', label: 'Face Boundary', icon: '📐' },
+                { key: 'temporal', label: 'Temporal Consistency', icon: '🎬' },
+              ].map(({ key, label, icon }) => {
+                const score = riskData.scores[key];
+                if (score === undefined) return null;
+                const severity = score < 4 ? 'low' : score < 7 ? 'medium' : 'high';
+                return (
+                  <div key={key} className="score-item">
+                    <div className="score-label">
+                      <span>{icon} {label}</span>
+                      <span className={`score-value ${severity}`}>{score}/10</span>
+                    </div>
+                    <div className="score-bar">
+                      <div
+                        className={`score-fill ${severity}`}
+                        style={{ width: `${score * 10}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+              {riskData.scores.average !== undefined && (
+                <div className="score-item average">
+                  <div className="score-label">
+                    <span>📊 Average Score</span>
+                    <span className={`score-value ${riskData.scores.average < 4 ? 'low' : riskData.scores.average < 7 ? 'medium' : 'high'}`}>
+                      {riskData.scores.average}/10
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+            {riskData.keyEvidence && (
+              <div className="key-evidence">
+                <strong>Key Finding:</strong> {riskData.keyEvidence}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Detected Signals */}
         <div className="result-card">
           <h3>Detected Signals</h3>
@@ -217,7 +282,7 @@ use multiple verification methods for critical applications.
         <div className="result-card">
           <h3>Detailed Analysis</h3>
           <div className="analysis-text">
-            <Markdown>{result.analysis}</Markdown>
+            <Markdown>{riskData?.rawAnalysis || result.analysis}</Markdown>
           </div>
         </div>
 
