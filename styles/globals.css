@@ -482,6 +482,30 @@ body {
   border-radius: 4px;
 }
 
+.confidence-fill.low {
+  background: linear-gradient(90deg, #22c55e, #4ade80);
+}
+
+.confidence-fill.medium {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.confidence-fill.high {
+  background: linear-gradient(90deg, #ef4444, #f87171);
+}
+
+.confidence-value.low {
+  color: #22c55e;
+}
+
+.confidence-value.medium {
+  color: #f59e0b;
+}
+
+.confidence-value.high {
+  color: #ef4444;
+}
+
 .confidence-value {
   font-size: 1.5rem;
   font-weight: 700;

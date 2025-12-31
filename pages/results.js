@@ -118,8 +118,6 @@ use multiple verification methods for critical applications.
     );
   }
 
-  const riskClass = riskData.riskLevel.toLowerCase();
-
   return (
     <>
       <Head>
@@ -145,44 +143,19 @@ use multiple verification methods for critical applications.
           <p>{result.fileName}</p>
         </header>
 
-        {/* Risk Badge */}
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div className={`risk-badge ${riskClass}`}>
-            {riskClass === 'low' && (
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                <polyline points="22 4 12 14.01 9 11.01" />
-              </svg>
-            )}
-            {riskClass === 'medium' && (
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="8" x2="12" y2="12" />
-                <line x1="12" y1="16" x2="12.01" y2="16" />
-              </svg>
-            )}
-            {riskClass === 'high' && (
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                <line x1="12" y1="9" x2="12" y2="13" />
-                <line x1="12" y1="17" x2="12.01" y2="17" />
-              </svg>
-            )}
-            {riskData.riskInfo.label}
-          </div>
-          <p style={{ color: 'var(--text-muted)', maxWidth: 500, margin: '0 auto' }}>
-            {riskData.riskInfo.description}
-          </p>
-        </div>
-
-        {/* Confidence Score */}
+        {/* Degree of Risk */}
         <div className="result-card">
-          <h3>Confidence Score</h3>
+          <h3>Degree of Risk</h3>
           <div className="confidence-meter">
             <div className="confidence-bar">
-              <div className="confidence-fill" style={{ width: `${confidence}%` }} />
+              <div
+                className={`confidence-fill ${riskData.scores?.average < 4 ? 'low' : riskData.scores?.average < 7 ? 'medium' : 'high'}`}
+                style={{ width: `${(riskData.scores?.average || 0) * 10}%` }}
+              />
             </div>
-            <div className="confidence-value">{confidence}%</div>
+            <div className={`confidence-value ${riskData.scores?.average < 4 ? 'low' : riskData.scores?.average < 7 ? 'medium' : 'high'}`}>
+              {riskData.scores?.average || 0}/10
+            </div>
           </div>
         </div>
 
