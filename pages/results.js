@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
+import Markdown from 'react-markdown';
 import { RISK_LEVELS, parseAnalysisResponse, extractSignals, calculateConfidence } from '../lib/riskMapping';
 
 export default function Results() {
@@ -187,7 +188,9 @@ AI-powered deepfake detection
         {/* Detailed Analysis */}
         <div className="result-card">
           <h3>Detailed Analysis</h3>
-          <div className="analysis-text">{result.analysis}</div>
+          <div className="analysis-text">
+            <Markdown>{result.analysis}</Markdown>
+          </div>
         </div>
 
         {/* Actions */}

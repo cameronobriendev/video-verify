@@ -7,7 +7,13 @@
     "build": "next build",
     "start": "next start"
   },
-  "keywords": ["deepfake", "ai", "video", "authenticity", "verification"],
+  "keywords": [
+    "deepfake",
+    "ai",
+    "video",
+    "authenticity",
+    "verification"
+  ],
   "author": "Cameron O'Brien",
   "license": "MIT",
   "dependencies": {
@@ -15,6 +21,7 @@
     "next": "^16.1.1",
     "openai": "^6.15.0",
     "react": "^19.2.3",
-    "react-dom": "^19.2.3"
+    "react-dom": "^19.2.3",
+    "react-markdown": "^10.1.0"
   }
 }

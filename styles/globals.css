@@ -311,7 +311,51 @@ body {
   color: var(--text-secondary);
   font-size: 0.95rem;
   line-height: 1.8;
-  white-space: pre-wrap;
+}
+
+.analysis-text h1,
+.analysis-text h2,
+.analysis-text h3,
+.analysis-text h4 {
+  color: var(--text-primary);
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+
+.analysis-text h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.analysis-text h4 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.analysis-text p {
+  margin-bottom: 1em;
+}
+
+.analysis-text ul,
+.analysis-text ol {
+  margin-left: 1.5em;
+  margin-bottom: 1em;
+}
+
+.analysis-text li {
+  margin-bottom: 0.5em;
+}
+
+.analysis-text strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.analysis-text code {
+  background: var(--bg-secondary);
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  font-size: 0.9em;
 }
 
 /* Frame Preview */
