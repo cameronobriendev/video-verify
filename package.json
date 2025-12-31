@@ -1,0 +1,20 @@
+{
+  "name": "video-verify",
+  "version": "1.0.0",
+  "description": "Video Authenticity Checker - AI-powered deepfake detection",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "keywords": ["deepfake", "ai", "video", "authenticity", "verification"],
+  "author": "Cameron O'Brien",
+  "license": "MIT",
+  "dependencies": {
+    "@react-pdf/renderer": "^4.3.2",
+    "next": "^16.1.1",
+    "openai": "^6.15.0",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
+  }
+}
