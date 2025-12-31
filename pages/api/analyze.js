@@ -8,22 +8,25 @@ const ANALYSIS_PROMPT = `You are an expert video forensics analyst specializing 
 
 IMPORTANT: Assume the video MAY be manipulated until proven otherwise. Modern deepfakes are sophisticated - look carefully.
 
-Analyze these frames for manipulation indicators:
+You are receiving frames from 3 RANDOM SEGMENTS of the video, with ~15 CONSECUTIVE frames per segment (~2 seconds each). This allows you to detect TEMPORAL artifacts that only appear in consecutive frames.
 
-1. FACIAL ARTIFACTS (most common in deepfakes):
-   - Face boundary blending issues (look at jawline, hairline, ears)
-   - Skin texture inconsistencies (too smooth, plastic-looking, or mismatched)
-   - Unnatural eye reflections or catchlights that don't match
+ANALYZE EACH SEGMENT FOR:
+
+1. TEMPORAL ARTIFACTS (CRITICAL - look at consecutive frames):
+   - Face position/angle that jumps or jitters unnaturally between frames
+   - Facial features that "swim," warp, or shift slightly frame-to-frame
+   - Skin tone or lighting that flickers between consecutive frames
+   - Blinking that looks unnatural (too regular, incomplete, or mechanical)
+   - Micro-expressions that don't flow naturally
+   - Mouth movements that seem disconnected from natural speech patterns
+   - Hair or clothing edges that shimmer or warp unnaturally
+
+2. FACIAL ARTIFACTS:
+   - Face boundary blending issues (jawline, hairline, ears)
+   - Skin texture inconsistencies (too smooth, plastic-looking)
+   - Unnatural eye reflections or catchlights
    - Teeth that look blurry, merged, or unnaturally uniform
-   - Asymmetric facial features that shift between frames
-   - "Uncanny valley" appearance - face looks slightly off
-
-2. TEMPORAL ARTIFACTS (frame-to-frame):
-   - Face position/angle that jumps or jitters unnaturally
-   - Skin tone or lighting that flickers between frames
-   - Facial features that "swim" or warp slightly
-   - Blinking patterns that seem off (too regular, too rare, or unnatural)
-   - Expression changes that don't flow naturally
+   - "Uncanny valley" appearance
 
 3. BOUNDARY ARTIFACTS:
    - Blurring specifically around face edges
@@ -33,19 +36,19 @@ Analyze these frames for manipulation indicators:
 
 4. LIGHTING/SHADOW ISSUES:
    - Face lighting that doesn't match the scene
-   - Shadows on face inconsistent with background shadows
-   - Reflections that don't match between face and environment
+   - Shadows inconsistent with environment
 
-5. COMPRESSION TELLS:
-   - Different compression levels on face vs body/background
-   - Blockiness or artifacts specifically around facial region
+5. CROSS-SEGMENT COMPARISON:
+   - Does the face look consistent across all 3 segments?
+   - Any segments where the face looks "different" or "off"?
 
-For each issue found, specify:
-- Which frame(s)
-- Exactly what you see
-- How confident you are it indicates manipulation
+For each segment, provide:
+- Segment number
+- Specific frames where issues appear
+- Exactly what you observe
+- Confidence level (low/medium/high) that it indicates manipulation
 
-CRITICAL: If you see ANYTHING suspicious, flag it. It's better to have false positives than miss a deepfake. Be thorough and skeptical.`;
+CRITICAL: Pay special attention to frame-to-frame changes within each segment. Deepfakes often show subtle "swimming" or "warping" effects that only appear when viewing consecutive frames.`;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -68,10 +71,25 @@ export default async function handler(req, res) {
       }
     }));
 
-    // Add frame timestamp context
-    const frameContext = frames.map((frame, index) =>
-      `Frame ${index + 1}: timestamp ${frame.timestamp.toFixed(2)}s`
-    ).join('\n');
+    // Add frame context with segment info
+    const frameContext = frames.map((frame, index) => {
+      const segmentInfo = frame.segment ? `Segment ${frame.segment}, ` : '';
+      return `Frame ${index + 1}: ${segmentInfo}timestamp ${frame.timestamp.toFixed(2)}s`;
+    }).join('\n');
+
+    // Group frames by segment for context
+    const segmentSummary = frames.reduce((acc, frame) => {
+      if (frame.segment) {
+        if (!acc[frame.segment]) acc[frame.segment] = { start: frame.timestamp, end: frame.timestamp, count: 0 };
+        acc[frame.segment].end = frame.timestamp;
+        acc[frame.segment].count++;
+      }
+      return acc;
+    }, {});
+
+    const segmentInfo = Object.entries(segmentSummary)
+      .map(([seg, data]) => `Segment ${seg}: ${data.count} frames from ${data.start.toFixed(2)}s to ${data.end.toFixed(2)}s`)
+      .join('\n');
 
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',
@@ -85,13 +103,21 @@ export default async function handler(req, res) {
           content: [
             {
               type: 'text',
-              text: `Analyze these ${frames.length} frames extracted from a video for deepfake/manipulation detection:\n\n${frameContext}\n\nProvide your detailed forensic analysis.`
+              text: `Analyze these ${frames.length} frames extracted from 3 random segments of a video for deepfake/manipulation detection.
+
+SEGMENT OVERVIEW:
+${segmentInfo}
+
+FRAME DETAILS:
+${frameContext}
+
+The frames within each segment are CONSECUTIVE (about 0.13 seconds apart), allowing you to detect temporal artifacts. Analyze each segment for frame-to-frame inconsistencies, then provide your overall assessment.`
             },
             ...imageContent
           ]
         }
       ],
-      max_tokens: 3000
+      max_tokens: 4000
     });
 
     const analysis = response.choices[0].message.content;

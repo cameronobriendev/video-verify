@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { RISK_LEVELS, parseAnalysisResponse, extractSignals, calculateConfidence } from '../lib/riskMapping';
@@ -162,13 +162,24 @@ AI-powered deepfake detection
         {/* Analyzed Frames */}
         {result.frames && result.frames.length > 0 && (
           <div className="result-card">
-            <h3>Analyzed Frames</h3>
+            <h3>Analyzed Frames ({result.frames.length} frames from 3 segments)</h3>
             <div className="frames-grid">
-              {result.frames.map((frame, index) => (
-                <div key={index} className="frame-thumb">
-                  <img src={frame.data} alt={`Frame ${index + 1}`} />
-                </div>
-              ))}
+              {result.frames.map((frame, index) => {
+                const showSegmentLabel = index === 0 ||
+                  (frame.segment && result.frames[index - 1]?.segment !== frame.segment);
+                return (
+                  <React.Fragment key={index}>
+                    {showSegmentLabel && frame.segment && (
+                      <div className="segment-label">
+                        Segment {frame.segment} ({frame.timestamp?.toFixed(1)}s)
+                      </div>
+                    )}
+                    <div className="frame-thumb">
+                      <img src={frame.data} alt={`Frame ${index + 1}`} />
+                    </div>
+                  </React.Fragment>
+                );
+              })}
             </div>
           </div>
         )}

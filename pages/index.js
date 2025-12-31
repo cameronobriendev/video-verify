@@ -44,7 +44,9 @@ export default function Home() {
     }
   };
 
-  const extractFrames = async (videoFile, frameCount = 6) => {
+  // Extract frames using temporal density approach:
+  // 3 random segments, ~15 consecutive frames each (2 seconds sampled)
+  const extractFrames = async (videoFile) => {
     return new Promise((resolve, reject) => {
       const video = document.createElement('video');
       const canvas = document.createElement('canvas');
@@ -54,12 +56,47 @@ export default function Home() {
       video.muted = true;
       video.playsInline = true;
 
-      const frames = [];
-      let currentFrame = 0;
+      const allFrames = [];
+      const segments = 3; // 3 random spots in video
+      const framesPerSegment = 15; // 15 frames per segment (sampled from 2 seconds)
+      const segmentDuration = 2; // 2 seconds per segment
+      const frameInterval = segmentDuration / framesPerSegment; // ~0.133s between frames
+
+      let segmentTimestamps = [];
+      let currentSegment = 0;
+      let currentFrameInSegment = 0;
 
       video.onloadedmetadata = () => {
         const duration = video.duration;
-        const interval = duration / (frameCount + 1);
+
+        // Pick 3 random timestamps (avoid first/last 3 seconds)
+        const safeStart = Math.min(3, duration * 0.1);
+        const safeEnd = Math.max(duration - 3, duration * 0.9);
+        const usableDuration = safeEnd - safeStart - segmentDuration;
+
+        if (usableDuration < segmentDuration * segments) {
+          // Short video: just sample evenly
+          for (let i = 0; i < segments; i++) {
+            segmentTimestamps.push(safeStart + (usableDuration / segments) * i);
+          }
+        } else {
+          // Pick random non-overlapping segments
+          const used = [];
+          for (let i = 0; i < segments; i++) {
+            let timestamp;
+            let attempts = 0;
+            do {
+              timestamp = safeStart + Math.random() * usableDuration;
+              attempts++;
+            } while (
+              used.some(t => Math.abs(t - timestamp) < segmentDuration + 1) &&
+              attempts < 50
+            );
+            used.push(timestamp);
+            segmentTimestamps.push(timestamp);
+          }
+          segmentTimestamps.sort((a, b) => a - b);
+        }
 
         canvas.width = Math.min(video.videoWidth, 1280);
         canvas.height = Math.min(video.videoHeight, 720);
@@ -72,13 +109,14 @@ export default function Home() {
         const scaledHeight = video.videoHeight * scale;
 
         const captureFrame = () => {
-          if (currentFrame >= frameCount) {
+          if (currentSegment >= segments) {
             URL.revokeObjectURL(video.src);
-            resolve(frames);
+            resolve(allFrames);
             return;
           }
 
-          const timestamp = interval * (currentFrame + 1);
+          const baseTime = segmentTimestamps[currentSegment];
+          const timestamp = baseTime + (currentFrameInSegment * frameInterval);
           video.currentTime = timestamp;
         };
 
@@ -94,18 +132,25 @@ export default function Home() {
           );
 
           const frameData = canvas.toDataURL('image/jpeg', 0.8);
-          frames.push({
+          allFrames.push({
             timestamp: video.currentTime,
             data: frameData,
-            index: currentFrame
+            segment: currentSegment + 1,
+            frameInSegment: currentFrameInSegment + 1
           });
 
+          const totalFrames = segments * framesPerSegment;
+          const completedFrames = (currentSegment * framesPerSegment) + currentFrameInSegment + 1;
           setProgress({
-            stage: 'Extracting frames',
-            percent: Math.round(((currentFrame + 1) / frameCount) * 30)
+            stage: `Extracting segment ${currentSegment + 1}/${segments}`,
+            percent: Math.round((completedFrames / totalFrames) * 30)
           });
 
-          currentFrame++;
+          currentFrameInSegment++;
+          if (currentFrameInSegment >= framesPerSegment) {
+            currentSegment++;
+            currentFrameInSegment = 0;
+          }
           captureFrame();
         };
 
@@ -130,7 +175,7 @@ export default function Home() {
     try {
       // Step 1: Extract frames
       setProgress({ stage: 'Extracting frames', percent: 5 });
-      const frames = await extractFrames(file, 12);
+      const frames = await extractFrames(file);
 
       // Step 2: Send to API
       setProgress({ stage: 'Analyzing with AI', percent: 40 });

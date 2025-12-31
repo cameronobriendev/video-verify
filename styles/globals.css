@@ -317,9 +317,23 @@ body {
 /* Frame Preview */
 .frames-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
   margin-top: 16px;
+}
+
+.segment-label {
+  grid-column: 1 / -1;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-top: 12px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.segment-label:first-child {
+  margin-top: 0;
 }
 
 .frame-thumb {
