@@ -162,7 +162,7 @@ AI-powered deepfake detection
         {/* Analyzed Frames */}
         {result.frames && result.frames.length > 0 && (
           <div className="result-card">
-            <h3>Analyzed Frames ({result.frames.length} frames from 3 segments)</h3>
+            <h3>Analyzed Frames ({result.frames.length} consecutive frames)</h3>
             <div className="frames-grid">
               {result.frames.map((frame, index) => {
                 const showSegmentLabel = index === 0 ||

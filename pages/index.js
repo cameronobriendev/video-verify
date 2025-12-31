@@ -57,9 +57,9 @@ export default function Home() {
       video.playsInline = true;
 
       const allFrames = [];
-      const segments = 3; // 3 random spots in video
-      const framesPerSegment = 15; // 15 frames per segment (sampled from 2 seconds)
-      const segmentDuration = 2; // 2 seconds per segment
+      const segments = 1; // 1 random spot in video
+      const framesPerSegment = 15; // 15 consecutive frames
+      const segmentDuration = 2; // 2 seconds
       const frameInterval = segmentDuration / framesPerSegment; // ~0.133s between frames
 
       let segmentTimestamps = [];

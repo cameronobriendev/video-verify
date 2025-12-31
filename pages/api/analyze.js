@@ -8,7 +8,7 @@ const ANALYSIS_PROMPT = `You are an expert video forensics analyst specializing 
 
 IMPORTANT: Assume the video MAY be manipulated until proven otherwise. Modern deepfakes are sophisticated - look carefully.
 
-You are receiving frames from 3 RANDOM SEGMENTS of the video, with ~15 CONSECUTIVE frames per segment (~2 seconds each). This allows you to detect TEMPORAL artifacts that only appear in consecutive frames.
+You are receiving ~15 CONSECUTIVE frames from a random segment of the video (~2 seconds). This allows you to detect TEMPORAL artifacts that only appear in consecutive frames.
 
 ANALYZE EACH SEGMENT FOR:
 
@@ -38,15 +38,11 @@ ANALYZE EACH SEGMENT FOR:
    - Face lighting that doesn't match the scene
    - Shadows inconsistent with environment
 
-5. CROSS-SEGMENT COMPARISON:
-   - Does the face look consistent across all 3 segments?
-   - Any segments where the face looks "different" or "off"?
-
-For each segment, provide:
-- Segment number
-- Specific frames where issues appear
+Provide:
+- Specific frames where issues appear (by frame number)
 - Exactly what you observe
 - Confidence level (low/medium/high) that it indicates manipulation
+- Overall verdict: LIKELY AUTHENTIC, POSSIBLY MANIPULATED, or LIKELY MANIPULATED
 
 CRITICAL: Pay special attention to frame-to-frame changes within each segment. Deepfakes often show subtle "swimming" or "warping" effects that only appear when viewing consecutive frames.`;
 
@@ -103,15 +99,14 @@ export default async function handler(req, res) {
           content: [
             {
               type: 'text',
-              text: `Analyze these ${frames.length} frames extracted from 3 random segments of a video for deepfake/manipulation detection.
+              text: `Analyze these ${frames.length} consecutive frames extracted from a video for deepfake/manipulation detection.
 
-SEGMENT OVERVIEW:
-${segmentInfo}
+SEGMENT: ${segmentInfo || 'Single segment'}
 
-FRAME DETAILS:
+FRAME TIMESTAMPS:
 ${frameContext}
 
-The frames within each segment are CONSECUTIVE (about 0.13 seconds apart), allowing you to detect temporal artifacts. Analyze each segment for frame-to-frame inconsistencies, then provide your overall assessment.`
+These frames are CONSECUTIVE (about 0.13 seconds apart). Look for frame-to-frame changes that indicate manipulation - swimming, warping, flickering, or unnatural movements.`
             },
             ...imageContent
           ]
