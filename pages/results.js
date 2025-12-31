@@ -168,18 +168,18 @@ use multiple verification methods for critical applications.
             </p>
             <div className="scores-grid">
               {[
-                { key: 'mouth', label: 'Mouth Region', icon: '👄' },
-                { key: 'eyes', label: 'Eye Region', icon: '👁️' },
-                { key: 'boundary', label: 'Face Boundary', icon: '📐' },
-                { key: 'temporal', label: 'Temporal Consistency', icon: '🎬' },
-              ].map(({ key, label, icon }) => {
+                { key: 'mouth', label: 'Mouth Region' },
+                { key: 'eyes', label: 'Eye Region' },
+                { key: 'boundary', label: 'Face Boundary' },
+                { key: 'temporal', label: 'Temporal Consistency' },
+              ].map(({ key, label }) => {
                 const score = riskData.scores[key];
                 if (score === undefined) return null;
                 const severity = score < 4 ? 'low' : score < 7 ? 'medium' : 'high';
                 return (
                   <div key={key} className="score-item">
                     <div className="score-label">
-                      <span>{icon} {label}</span>
+                      <span>{label}</span>
                       <span className={`score-value ${severity}`}>{score}/10</span>
                     </div>
                     <div className="score-bar">
@@ -194,7 +194,7 @@ use multiple verification methods for critical applications.
               {riskData.scores.average !== undefined && (
                 <div className="score-item average">
                   <div className="score-label">
-                    <span>📊 Average Score</span>
+                    <span>Average Score</span>
                     <span className={`score-value ${riskData.scores.average < 4 ? 'low' : riskData.scores.average < 7 ? 'medium' : 'high'}`}>
                       {riskData.scores.average}/10
                     </span>
